@@ -10,8 +10,10 @@ import UIKit
 class Item: NSObject {
     var title:String
     var date:String
-    init(title:String, date:String) {
+    var href:String
+    init(title:String, date:String, href:String) {
         self.title = title
         self.date = date
+        self.href = href
     }
 }

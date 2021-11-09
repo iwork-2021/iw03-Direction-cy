@@ -8,10 +8,8 @@
 import UIKit
 
 class NewsTableViewController: UITableViewController {
-    var items:[Item] = [
-        Item(title: "work", date:"125")
-    ]
-
+    var items:[Item] = []
+    var host:String = "https://itsc.nju.edu.cn"
     override func viewDidLoad() {
         super.viewDidLoad()
         // Uncomment the following line to preserve selection between presentations
@@ -19,7 +17,7 @@ class NewsTableViewController: UITableViewController {
 
         // Uncomment the following line to display an Edit button in the navigation bar for this view controller.
         // self.navigationItem.rightBarButtonItem = self.editButtonItem
-        fetchData();
+        fetchData(str: "/xwdt/list.htm");
     }
 
     // MARK: - Table view data source
@@ -31,11 +29,11 @@ class NewsTableViewController: UITableViewController {
 
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         // #warning Incomplete implementation, return the number of rows
-        return 1
+        return items.count
     }
     
-    func fetchData() {
-            let url = URL(string: "https://itsc.nju.edu.cn/xwdt/list.htm")!
+    func fetchData(str:String) {
+            let url = URL(string: host + str)!
             let task = URLSession.shared.dataTask(with: url, completionHandler: {
                 data, response, error in
                 if let error = error {
@@ -52,7 +50,8 @@ class NewsTableViewController: UITableViewController {
                             let data = data,
                             let string = String(data: data, encoding: .utf8) {
                                 DispatchQueue.main.async {
-                                    self.regGetSub(pattern: "class=\"news_title\"><a href=(.*)</a></span>", str: string)
+                                    self.regGetSub(pattern: "class=\"news_title\"><a href=(.*)</a></span>(\\s*)<span class=\"news_meta\">(.*)</span>", str: string)
+                                    self.fetchData(str: self.findNext(pattern: "<a class=\"next\" href=\"(.*)\" target=", str: string))
                                 }
                 }
             })
@@ -61,19 +60,48 @@ class NewsTableViewController: UITableViewController {
     
     func regGetSub(pattern: String, str: String)
     {
-        var substr = [String]()
+        var substr:String = ""
         let regex = try! NSRegularExpression(pattern: pattern, options: [])
         let matches = regex.matches(in: str, options: [], range: NSRange(str.startIndex..., in:str))
         for match in matches {
-            substr.append((str as NSString).substring(with: match.range))
+            substr = (str as NSString).substring(with: match.range)
+            let range1:Range = substr.range(of: "title='")!
+            let range2:Range = substr.range(of: "'>")!
+            let range3:Range = substr.range(of: "class=\"news_meta\">")!
+            let range4:Range = substr.range(of: "</span>",options: .backwards)!
+            let range5:Range = substr.range(of: "<a href='")!
+            let range6:Range = substr.range(of: "' target=")!
+            let title = String(substr[range1.upperBound ..< range2.lowerBound])
+            let date = String(substr[range3.upperBound ..< range4.lowerBound])
+            let href = String(substr[range5.upperBound ..< range6.lowerBound])
+            items.append(Item(title: title, date: date, href: href))
+            
         }
-        
+        self.tableView.reloadData()
     }
+    
+    func findNext(pattern: String, str: String) -> String
+    {
+        var substr:String = ""
+        let regex = try! NSRegularExpression(pattern: pattern, options: [])
+        let matches = regex.matches(in: str, options: [], range: NSRange(str.startIndex..., in:str))
+        for match in matches
+        {
+            substr = (str as NSString).substring(with: match.range)
+            let range1:Range = substr.range(of: "<a class=\"next\" href=\"")!
+            let range2:Range = substr.range(of: "\" target=")!
+            print(String(substr[range1.upperBound ..< range2.lowerBound]))
+            return String(substr[range1.upperBound ..< range2.lowerBound])
+        }
+        return ""
+    }
+    
+
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
             // Configure the cell...
             let cell = tableView.dequeueReusableCell(withIdentifier: "newsCell", for: indexPath) as! MyTableViewCell
             let item = items[indexPath.row]
-            cell.title.text! = item.title
+            cell.title.text! = String(item.title.prefix(25))
             cell.date.text! = item.date
             return cell
         }
