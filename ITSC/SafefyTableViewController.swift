@@ -1,23 +1,23 @@
 //
-//  NewsTableViewController.swift
+//  SafefyTableViewController.swift
 //  ITSC
 //
-//  Created by nju on 2021/11/8.
+//  Created by nju on 2021/11/10.
 //
 
 import UIKit
 
-class NewsTableViewController: UITableViewController {
+class SafefyTableViewController: UITableViewController {
     var items:[Item] = []
     var host:String = "https://itsc.nju.edu.cn"
     override func viewDidLoad() {
         super.viewDidLoad()
+        fetchData(str: "/aqtg/list.htm")
         // Uncomment the following line to preserve selection between presentations
         // self.clearsSelectionOnViewWillAppear = false
 
         // Uncomment the following line to display an Edit button in the navigation bar for this view controller.
         // self.navigationItem.rightBarButtonItem = self.editButtonItem
-        fetchData(str: "/xwdt/list.htm")
     }
 
     // MARK: - Table view data source
@@ -31,7 +31,7 @@ class NewsTableViewController: UITableViewController {
         // #warning Incomplete implementation, return the number of rows
         return items.count
     }
-    
+
     func fetchData(str:String) {
         let url = URL(string: host + str)!
         let task = URLSession.shared.dataTask(with: url, completionHandler: {
@@ -76,7 +76,6 @@ class NewsTableViewController: UITableViewController {
             let date = String(substr[range3.upperBound ..< range4.lowerBound])
             let href = String(substr[range5.upperBound ..< range6.lowerBound])
             items.append(Item(title: title, date: date, href: href))
-            
         }
         self.tableView.reloadData()
     }
@@ -91,20 +90,20 @@ class NewsTableViewController: UITableViewController {
             substr = (str as NSString).substring(with: match.range)
             let range1:Range = substr.range(of: "<a class=\"next\" href=\"")!
             let range2:Range = substr.range(of: "\" target=")!
+            print(String(substr[range1.upperBound ..< range2.lowerBound]))
             return String(substr[range1.upperBound ..< range2.lowerBound])
         }
         return ""
     }
     
-
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-            // Configure the cell...
-            let cell = tableView.dequeueReusableCell(withIdentifier: "newsCell", for: indexPath) as! MyTableViewCell
-            let item = items[indexPath.row]
-            cell.title.text! = String(item.title.prefix(25))
-            cell.date.text! = item.date
-            return cell
-        }
+        // Configure the cell...
+        let cell = tableView.dequeueReusableCell(withIdentifier: "safetyCell", for: indexPath) as! SafetyTableViewCell
+        let item = items[indexPath.row]
+        cell.title.text! = String(item.title.prefix(25))
+        cell.date.text! = item.date
+        return cell
+    }
     
 
     /*
@@ -123,7 +122,7 @@ class NewsTableViewController: UITableViewController {
             tableView.deleteRows(at: [indexPath], with: .fade)
         } else if editingStyle == .insert {
             // Create a new instance of the appropriate class, insert it into the array, and add a new row to the table view
-        }    
+        }
     }
     */
 
@@ -145,13 +144,14 @@ class NewsTableViewController: UITableViewController {
     // MARK: - Navigation
 
     // In a storyboard-based application, you will often want to do a little preparation before navigation
-    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
-        // Get the new view controller using segue.destination.
-        // Pass the selected object to the new view controller.
-        let newsViewController = segue.destination as! NewsViewController
-        let cell = sender as! MyTableViewCell
-        var itemIndex = tableView.indexPath(for: cell)!.row
-        newsViewController.href = items[itemIndex].href
-    }
+    
+     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+         // Get the new view controller using segue.destination.
+         // Pass the selected object to the new view controller.
+         let newsViewController = segue.destination as! NewsViewController
+         let cell = sender as! SafetyTableViewCell
+         var itemIndex = tableView.indexPath(for: cell)!.row
+         newsViewController.href = items[itemIndex].href
+     }
 
 }
