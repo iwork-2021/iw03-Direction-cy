@@ -18,3 +18,112 @@
 1. 界面美观（通过自动化布局适配多种设备）
 2. 性能良好（用GCD进行并发编程，网络通信应考虑缓冲已下载数据内容）
 
+
+以新闻公告设计为例，其余设计类似
+
+## NewsTableViewController
+
+根据课件中给的代码段加以改编， 得到获取html的函数 func fetchData(str:String)
+
+其中并发编程如下:
+
+      DispatchQueue.main.async 
+      {
+         self.regGetSub(pattern: "class=\"news_title\"><a href=(.*)</a></span>(\\s*)<span class=\"news_meta\">(.*)</span>", str: string)
+         //解析下一页
+         self.fetchData(str: self.findNext(pattern: "<a class=\"next\" href=\"(.*)\" target=", str: string))
+      }
+
+## 设计了func regGetSub(pattern: String, str: String)，使用正则表达式解析html
+
+      func regGetSub(pattern: String, str: String)
+      {
+         var substr:String = ""
+         let regex = try! NSRegularExpression(pattern: pattern, options: [])
+         let matches = regex.matches(in: str, options: [], range: NSRange(str.startIndex..., in:str))
+         for match in matches {
+            substr = (str as NSString).substring(with: match.range)
+            
+            ...
+
+            items.append(Item(title: title, date: date, href: href))
+            
+         }
+         self.tableView.reloadData()
+      }
+
+解析出每一条目的title，date，链接
+
+## 设计了 func findNext(pattern: String, str: String) -> String， 使用正则表达式得到跳转下一页的链接
+
+## 设计了Item 和 MyTableViewCell类，将其映射显示
+
+## NewsViewController
+
+其中并发编程如下:
+
+      DispatchQueue.main.async 
+      {
+         //得到解析文字内容
+         self.regGetSub(pattern: "<h1 class=\"arti_title\">[\\s\\S]*<br /></p></div></div>", str: string)
+         //获取图片
+         self.getImage(pattern: "<img data-layer=\"photo\" src=\"(.*?) original-src=\"", str: string)
+      }
+
+## 设计 func getImage(pattern: String, str: String) 来 获取图片
+
+同样使用正则表达式来获取图片原链接，然后用并发的网络通信下载图片
+
+      let url = URL(string: host + tmp)
+      let request = URLRequest(url:url!)
+      let session = URLSession.shared
+      let dataTask = session.dataTask(with: request,completionHandler: {
+          (data, response, error) -> Void in
+         if error != nil{
+               print(error.debugDescription)
+         }else{
+               let img = UIImage(data:data!)
+               DispatchQueue.main.async {
+                  self.images.append(img!)
+                  self.loadImage(index: self.i)
+               }
+         }
+      }) as URLSessionTask
+      dataTask.resume()
+
+## 切换显示图片的设计
+
+点击一个透明的button获取响应
+
+      @IBAction func changeImage(_ sender: Any) {
+         i = (i + 1) % images.count
+         loadImage(index: i)
+      }
+
+      func loadImage(index:Int)
+      {
+         if (index < images.count){
+            imageview.image = images[index]
+         }
+      }
+
+## 为方便解析html写的一个string的extension，去除html标签
+
+      extension String {
+         mutating func filterHTML() -> String?{
+            var scanner = Scanner(string: self)
+            var text: NSString?
+            while !scanner.isAtEnd {
+               scanner.scanUpTo("<", into: nil)
+               scanner.scanUpTo(">", into: &text)
+               self = self.replacingOccurrences(of: "\(text == nil ? "" : text!)>", with: "")
+            }
+            scanner = Scanner(string: self)
+            while !scanner.isAtEnd {
+               scanner.scanUpTo("&", into: nil)
+               scanner.scanUpTo(";", into: &text)
+               self = self.replacingOccurrences(of: "\(text == nil ? "" : text!);", with: "")
+            }
+            return self
+         }
+      }
